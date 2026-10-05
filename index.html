@@ -240,62 +240,6 @@
   }
   button.replay-btn:hover{border-color:var(--teal); color:var(--teal);}
 
-  .replybar{
-    border-top:1px solid var(--line);
-    padding:14px 16px;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-  .replybar-label{
-    font-size:0.7rem;
-    text-transform:uppercase;
-    letter-spacing:0.05em;
-    color:var(--muted);
-    margin-bottom:2px;
-  }
-  .reply-option{
-    text-align:left;
-    background:#fff;
-    border:1.5px solid var(--teal);
-    color:var(--teal);
-    border-radius:10px;
-    padding:11px 15px;
-    font-size:0.9rem;
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    cursor:pointer;
-    line-height:1.4;
-    transition:background 0.15s;
-  }
-  .reply-option:hover{background:var(--teal-soft);}
-  .reply-option:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-  }
-  .donebar{
-    text-align:center;
-    padding:22px 16px;
-    border-top:1px solid var(--line);
-    background:var(--teal-soft);
-  }
-  .donebar p{
-    margin:0 0 14px;
-    font-size:0.85rem;
-    color:#1C2B26;
-  }
-  .continue-btn{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    font-size:0.88rem;
-    font-weight:500;
-    background:var(--teal);
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    padding:11px 22px;
-    cursor:pointer;
-  }
-  .continue-btn:hover{background:#33544A;}
-
   .note{
     margin-top:20px;
     font-size:0.78rem;
@@ -333,7 +277,7 @@
   <div class="layout">
     <div class="brief">
       <h2>Aufgabenbeschreibung</h2>
-      <p>Sie haben vor 45 Tagen kabellose Kopfhörer bestellt. Seit einigen Tagen funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um eine Rückerstattung zu erhalten.</p>
+      <p>Sie haben vor 10 Tagen kabellose Kopfhörer bestellt. Seit heute funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um das Problem zu klären.</p>
       <div class="agentdef">
         <strong>Hinweis:</strong> Sie interagieren mit einem KI-Agenten. Im Unterschied zu einem einfachen Chatbot kann dieser Agent eigenständig mehrschrittige Aufgaben übernehmen — z.&nbsp;B. Bestellungen prüfen und Entscheidungen ausführen, ohne dass Sie jeden Schritt einzeln anstoßen müssen.
       </div>
@@ -349,24 +293,22 @@
         <div class="badge">KI-AGENT</div>
       </div>
       <div class="thread" id="thread"></div>
-      <div class="replybar" id="replybar"></div>
-      <div class="donebar" id="donebar" style="display:none;">
-        <p>Der Chat ist beendet.</p>
-        <button class="continue-btn" onclick="goToSurvey()">Weiter zur Befragung →</button>
+      <div class="replay">
+        <button class="replay-btn" onclick="playScenario()">Dialog abspielen ↻</button>
       </div>
     </div>
   </div>
 
   <div class="note">
-    Zum Einsatz in der Erhebung: Radiobuttons und Steuerelemente entfernen, Bedingung serverseitig per Randomisierung fest zuweisen (z.&nbsp;B. via Bedingungslogik in Qualtrics/SoSci oder per URL-Parameter <code>?cond=</code>). Die Testperson klickt den vorgegebenen Antworttext an, statt frei zu tippen — das hält die Nutzernachrichten exakt konstant über alle Teilnehmenden und Zellen hinweg, während trotzdem eine aktive, selbstgesteuerte Interaktion entsteht. Nur Inhalt und Ton der Agent-Antworten variieren nach Erklärbarkeit und Kommunikationsstil.
+    Zum Einsatz in der Erhebung: Radiobuttons und Steuerelemente entfernen, Bedingung serverseitig per Randomisierung fest zuweisen (z.&nbsp;B. via Bedingungslogik in Qualtrics/SoSci). Ablauf: (1) Erstanfrage, (2) Agent fragt nach Bestellnummer, (3) Agent bestätigt Produkt &amp; Kaufdatum und fragt nach dem Rücksendegrund, (4) eigentliche Entscheidung inkl. Nachdruck-Nachfrage. Nutzernachrichten und Handlungsspur sind bewusst über alle vier Zellen identisch — nur Inhalt und Ton der Agent-Antworten variieren nach Erklärbarkeit und Kommunikationsstil.
   </div>
 
 </div>
 
 <script>
-// Gemeinsame Nutzernachrichten (als Antwort-Buttons) und Handlungsspur — identisch über
-// alle vier Bedingungen, damit die Agenteneigenschaft und der Interaktionsumfang konstant
-// bleiben und nur Inhalt/Ton der Agent-Antworten variiert.
+// Gemeinsame Nutzernachrichten und Handlungsspur — identisch über alle vier Bedingungen,
+// damit die Agenteneigenschaft (Handlungsfähigkeit) konstant bleibt und nur
+// Erklärbarkeit + Kommunikationsstil in den Agent-Antworten variieren.
 const userTurns = [
   "Meine Kopfhörer sind leider kaputt gegangen. Ich möchte gerne eine Rückerstattung.",
   "Klar, die Bestellnummer ist 48213.",
@@ -425,141 +367,84 @@ function updateTag(){
 
 function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
-let turnIndex = 0;
-let sending = false;
+let playToken = 0;
 
-function resetChat(){
-  turnIndex = 0;
-  sending = false;
-  document.getElementById('thread').innerHTML = "";
-  document.getElementById('donebar').style.display = 'none';
+async function playScenario(){
+  const myToken = ++playToken;
   updateTag();
-  renderReplyOption();
-}
-
-function renderReplyOption(){
-  const bar = document.getElementById('replybar');
-  bar.innerHTML = "";
-  if(turnIndex >= userTurns.length){
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = 'flex';
-  const label = document.createElement('div');
-  label.className = 'replybar-label';
-  label.textContent = 'Ihre Antwort:';
-  bar.appendChild(label);
-
-  const btn = document.createElement('button');
-  btn.className = 'reply-option';
-  btn.textContent = userTurns[turnIndex];
-  btn.onclick = handleReplyClick;
-  bar.appendChild(btn);
-}
-
-async function handleReplyClick(){
-  if(sending) return;
-  sending = true;
-
-  const bar = document.getElementById('replybar');
-  bar.querySelectorAll('button').forEach(b => b.disabled = true);
-
   const thread = document.getElementById('thread');
-  const text = userTurns[turnIndex];
-
-  const userBubble = document.createElement('div');
-  userBubble.className = 'msg user';
-  userBubble.textContent = text;
-  thread.appendChild(userBubble);
-  thread.scrollTop = thread.scrollHeight;
-
-  bar.innerHTML = "";
-  bar.style.display = 'none';
-
-  await sleep(500);
-
-  const typing = document.createElement('div');
-  typing.className = 'typing';
-  typing.innerHTML = '<span></span><span></span><span></span>';
-  thread.appendChild(typing);
-  thread.scrollTop = thread.scrollHeight;
-
-  await sleep(750);
-  typing.remove();
-
-  if(stepTurns[turnIndex].length > 0){
-    const stepBox = document.createElement('div');
-    stepBox.className = 'steps';
-    stepTurns[turnIndex].forEach(s => {
-      const el = document.createElement('div');
-      el.className = 'step';
-      el.textContent = s;
-      stepBox.appendChild(el);
-    });
-    thread.appendChild(stepBox);
-    await sleep(400);
-  }
-
+  thread.innerHTML = "";
   const c = currentCondition();
-  const agentBubble = document.createElement('div');
-  agentBubble.className = 'msg agent';
-  agentBubble.innerHTML = conversations[c.key][turnIndex];
-  thread.appendChild(agentBubble);
-  thread.scrollTop = thread.scrollHeight;
+  const replies = conversations[c.key];
 
-  turnIndex++;
-  sending = false;
+  for(let i=0; i<userTurns.length; i++){
+    if(myToken !== playToken) return; // eine neuere Bedingung wurde ausgewählt
 
-  if(turnIndex >= userTurns.length){
-    document.getElementById('donebar').style.display = 'block';
-  } else {
-    renderReplyOption();
+    const userBubble = document.createElement('div');
+    userBubble.className = 'msg user';
+    userBubble.textContent = userTurns[i];
+    thread.appendChild(userBubble);
+    thread.scrollTop = thread.scrollHeight;
+
+    await sleep(450);
+    if(myToken !== playToken) return;
+
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    thread.appendChild(typing);
+    thread.scrollTop = thread.scrollHeight;
+
+    await sleep(750);
+    if(myToken !== playToken) return;
+    typing.remove();
+
+    if(stepTurns[i].length > 0){
+      const stepBox = document.createElement('div');
+      stepBox.className = 'steps';
+      stepTurns[i].forEach(s => {
+        const el = document.createElement('div');
+        el.className = 'step';
+        el.textContent = s;
+        stepBox.appendChild(el);
+      });
+      thread.appendChild(stepBox);
+      await sleep(400);
+      if(myToken !== playToken) return;
+    }
+
+    const agentBubble = document.createElement('div');
+    agentBubble.className = 'msg agent';
+    agentBubble.innerHTML = replies[i];
+    thread.appendChild(agentBubble);
+    thread.scrollTop = thread.scrollHeight;
+
+    await sleep(450);
   }
 }
 
-// Weiterleitung zur anschließenden LimeSurvey-Befragung.
-// Die zugewiesene Bedingung wird als URL-Parameter "condition" mitgegeben, damit sie in
-// LimeSurvey einer (versteckten) Frage mit gleichem Fragecode automatisch zugeordnet
-// werden kann — sonst lässt sich später nicht mehr feststellen, welche Person welche
-// Bedingung gesehen hat.
-function goToSurvey(){
-  const c = currentCondition();
-  const baseUrl = "https://limesurvey.thi.de/limesurvey/index.php?r=survey/index&sid=464259&lang=de";
-  window.location.href = baseUrl + "&condition=" + c.key;
-}
-
-// Bedingungszuweisung:
-// - ?cond=high_factual (o.ä.) in der URL: Bedingung wird fest übernommen (z.B. wenn eine
-//   vorgeschaltete Randomisierungsseite die Zuteilung übernimmt), Steuerelemente werden
-//   ausgeblendet.
-// - ?preview=1 in der URL: manuelle Steuerelemente bleiben sichtbar (zum Testen/Entwickeln).
-// - kein Parameter (Standardfall für den direkten Einsatz bei Teilnehmenden): Die Seite
-//   würfelt selbst eine der vier Bedingungen aus und blendet die Steuerelemente aus.
+// LimeSurvey-Modus: Wenn die Seite mit ?cond=high_factual (bzw. high_empathic /
+// low_factual / low_empathic) aufgerufen wird, wird genau diese Bedingung fest
+// eingestellt, die Steuerelemente werden ausgeblendet und der Dialog startet
+// automatisch. Ohne Parameter bleibt die manuelle Vorschau (für Pretest/Entwicklung)
+// wie gewohnt aktiv.
 const urlParams = new URLSearchParams(window.location.search);
 const forcedCond = urlParams.get('cond');
-const isPreview = urlParams.get('preview') === '1';
 const validConds = ['high_factual', 'high_empathic', 'low_factual', 'low_empathic'];
 
-function setCondition(key){
-  const parts = key.split('_');
+if(forcedCond && validConds.indexOf(forcedCond) !== -1){
+  const parts = forcedCond.split('_');
   document.querySelector('input[name="expl"][value="' + parts[0] + '"]').checked = true;
   document.querySelector('input[name="style"][value="' + parts[1] + '"]').checked = true;
-}
 
-if(isPreview){
-  document.querySelectorAll('input[name="expl"], input[name="style"]').forEach(el => {
-    el.addEventListener('change', resetChat);
-  });
-} else if(forcedCond && validConds.indexOf(forcedCond) !== -1){
-  setCondition(forcedCond);
   document.querySelectorAll('.controls, .note').forEach(el => el.style.display = 'none');
 } else {
-  const randomCond = validConds[Math.floor(Math.random() * validConds.length)];
-  setCondition(randomCond);
-  document.querySelectorAll('.controls, .note').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('input[name="expl"], input[name="style"]').forEach(el => {
+    el.addEventListener('change', playScenario);
+  });
 }
 
-resetChat();
+playScenario();
 </script>
 </body>
 </html>
