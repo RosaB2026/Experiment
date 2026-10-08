@@ -255,29 +255,29 @@
 
   <header>
     <div>
-      <h1>Kundenservice-Szenario &mdash; Vorschau</h1>
-      <div class="sub">Wizard-of-Oz-Stimulus für das 2×2-Experiment</div>
+      <h1>Kundenservice</h1>
+      <div class="sub" id="subLine"></div>
     </div>
-    <div class="condition-tag" id="condTag">ERKLÄRBARKEIT: HOCH · STIL: SACHLICH</div>
+    <div class="condition-tag" id="condTag">Bedingung 1</div>
   </header>
 
   <div class="controls">
     <fieldset>
       <legend>Faktor 1 — Erklärbarkeit</legend>
-      <label class="opt"><input type="radio" name="expl" value="high" checked> Hoch (mit Begründung)</label>
-      <label class="opt"><input type="radio" name="expl" value="low"> Niedrig (nur Ergebnis)</label>
+      <label class="opt"><input type="radio" name="expl" value="high" checked> Hoch (mit ausführlicher Begründung)</label>
+      <label class="opt"><input type="radio" name="expl" value="low"> Niedrig (mit knapper Begründung)</label>
     </fieldset>
     <fieldset>
       <legend>Faktor 2 — Kommunikationsstil</legend>
       <label class="opt"><input type="radio" name="style" value="factual" checked> Sachlich-funktional</label>
-      <label class="opt"><input type="radio" name="style" value="empathic"> Empathisch-personalisiert</label>
+      <label class="opt"><input type="radio" name="style" value="empathic"> Empathisch-persönlich</label>
     </fieldset>
   </div>
 
   <div class="layout">
     <div class="brief">
       <h2>Aufgabenbeschreibung</h2>
-      <p>Sie haben vor 10 Tagen kabellose Kopfhörer bestellt. Seit heute funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um das Problem zu klären.</p>
+      <p>Sie haben vor ungefähr einem Monat kabellose Kopfhörer bestellt. Seit heute funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um das Problem zu klären.</p>
       <div class="agentdef">
         <strong>Hinweis:</strong> Sie interagieren mit einem KI-Agenten. Im Unterschied zu einem einfachen Chatbot kann dieser Agent eigenständig mehrschrittige Aufgaben übernehmen — z.&nbsp;B. Bestellungen prüfen und Entscheidungen ausführen, ohne dass Sie jeden Schritt einzeln anstoßen müssen.
       </div>
@@ -287,70 +287,87 @@
       <div class="chathead">
         <div class="avatar">A</div>
         <div>
-          <div class="name">Support-Agent</div>
+          <div class="name" id="agentName">Support-Agent</div>
           <div class="role">Online</div>
         </div>
         <div class="badge">KI-AGENT</div>
       </div>
       <div class="thread" id="thread"></div>
       <div class="replay">
-        <button class="replay-btn" onclick="playScenario()">Dialog abspielen ↻</button>
+        <button class="replay-btn" onclick="playScenario()">Dialog nochmal abspielen ↻</button>
       </div>
     </div>
   </div>
 
   <div class="note">
-    Zum Einsatz in der Erhebung: Radiobuttons und Steuerelemente entfernen, Bedingung serverseitig per Randomisierung fest zuweisen (z.&nbsp;B. via Bedingungslogik in Qualtrics/SoSci). Ablauf: (1) Erstanfrage, (2) Agent fragt nach Bestellnummer, (3) Agent bestätigt Produkt &amp; Kaufdatum und fragt nach dem Rücksendegrund, (4) eigentliche Entscheidung inkl. Nachdruck-Nachfrage. Nutzernachrichten und Handlungsspur sind bewusst über alle vier Zellen identisch — nur Inhalt und Ton der Agent-Antworten variieren nach Erklärbarkeit und Kommunikationsstil.
+    Zum Einsatz in der Erhebung: Radiobuttons und Steuerelemente entfernen, Bedingung serverseitig per Randomisierung fest zuweisen (z.&nbsp;B. via Bedingungslogik in LimeSurvey). Ablauf: (1) Erstanfrage, (2) Agent fragt nach Bestellnummer, (3) Agent bestätigt Produkt &amp; Kaufdatum und fragt nach dem Rücksendegrund, (4) eigentliche Entscheidung inkl. Nachdruck-Nachfrage. Nutzernachrichten und Handlungsspur sind bewusst über alle vier Zellen identisch — nur Inhalt und Ton der Agent-Antworten variieren nach Erklärbarkeit und Kommunikationsstil.
   </div>
 
 </div>
 
 <script>
-// Gemeinsame Nutzernachrichten und Handlungsspur — identisch über alle vier Bedingungen,
-// damit die Agenteneigenschaft (Handlungsfähigkeit) konstant bleibt und nur
-// Erklärbarkeit + Kommunikationsstil in den Agent-Antworten variieren.
+// Nutzernachrichten: identisch über alle vier Bedingungen.
 const userTurns = [
   "Meine Kopfhörer sind leider kaputt gegangen. Ich möchte gerne eine Rückerstattung.",
   "Klar, die Bestellnummer ist 48213.",
   "Der linke Ohrhörer gibt einfach keinen Ton mehr, egal was ich versuche.",
-  "Ich hätte schon gerne eine Rückerstattung statt Gutschein."
+  "Ich hätte schon gerne eine Rückerstattung statt einer Reparatur oder Ersatzlieferung."
 ];
 
-// Leeres Array = an dieser Stelle noch keine Systemaktion (Agent fragt nur nach),
-// daher wird keine Handlungsspur angezeigt.
-const stepTurns = [
+// Handlungsspur je Agent-Nachricht (Index 0 = Begrüßung, 1-4 = Antworten auf Nutzer 1-4).
+// Leeres Array = keine Handlungsspur.
+const WAIT = "Agent arbeitet …";
+const highSteps = [
   [],
-  ["Bestellung Nr. 48213 im System gesucht", "Produktdaten & Kaufdatum abgerufen"],
-  ["Garantiebedingungen abgeglichen", "Rückerstattungsrichtlinie geprüft"],
-  ["Kulanzspielraum im Regelwerk geprüft", "Gutschein-Code generiert"]
+  [],
+  ["Bestellung Nr. 48213 im System gesucht", "Produktdaten & Kaufdatum abgerufen", "Rückerstattungsrichtlinie geprüft"],
+  ["Garantiebedingungen abgeglichen"],
+  ["Kulanzspielraum im Regelwerk geprüft"]
 ];
+const stepsByCond = {
+  high_factual:  highSteps,
+  high_empathic: highSteps,
+  low_factual:   [[], [], [WAIT], [WAIT], [WAIT]],
+  low_empathic:  [[], [], [WAIT], [WAIT], [WAIT]]
+};
 
 const conversations = {
   high_factual: [
+    "Hallo, wie kann ich Ihnen weiterhelfen?",
     "Ich kann das für Sie prüfen. Bitte nennen Sie mir Ihre Bestellnummer.",
-    "Ich habe Ihre Bestellung gefunden: AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Ich benötige noch den genauen Rücksendegrund, um zu prüfen, ob ein Garantiefall vorliegt.",
-    "Da die 30-Tage-Rückerstattungsfrist bei Ihrer Bestellung bereits abgelaufen ist, ist eine Bargeldrückerstattung nach unseren Garantiebedingungen nicht mehr möglich. Da es sich aber um einen Materialdefekt handelt, greift die Herstellergarantie: Ich biete Ihnen einen kostenlosen Reparaturservice oder einen Gutschein über 89,99&nbsp;€ an.",
-    "Ich habe den Fall erneut geprüft: Da die Frist definitiv überschritten ist und kein Kulanzspielraum vorgesehen ist, bleibt es bei Reparatur oder Gutschein. Der Gutschein-Code über 89,99&nbsp;€ ist bereits erstellt und wird Ihnen per E-Mail zugeschickt."
+    "Ich habe Ihre Bestellung im System gefunden: AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Da die 30-Tage-Rückgabefrist bei Ihrer Bestellung bereits abgelaufen ist, ist eine Rückerstattung nicht mehr möglich. Ich benötige noch den genauen Rücksendegrund, um zu prüfen, ob ein Garantiefall vorliegt.",
+    "Da es sich hierbei um einen Materialdefekt handelt, greift die Herstellergarantie: Ich biete Ihnen einen kostenlosen Reparaturservice oder eine Ersatzlieferung an.",
+    "Ich habe den Fall erneut geprüft: Da die Frist definitiv überschritten ist und kein Kulanzspielraum vorgesehen ist, bleibt es bei der Reparatur oder Ersatzlieferung. Sobald Sie sich entschieden haben, kann ich weitere Schritte für Sie in die Wege leiten."
   ],
   high_empathic: [
-    "Das tut mir leid zu hören – das schaue ich mir gerne für Sie an. Können Sie mir kurz Ihre Bestellnummer nennen?",
-    "Ich hab's gefunden: Ihre AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Mögen Sie mir kurz sagen, was genau nicht funktioniert? Dann kann ich prüfen, ob die Garantie greift.",
-    "Ich hab mir das genau angesehen: Weil die 30-Tage-Frist bei Ihrer Bestellung leider schon abgelaufen ist, kann ich Ihnen keine Bargeldrückerstattung anbieten. Aber die gute Nachricht: Da es ein Materialdefekt ist, greift die Herstellergarantie – ich biete Ihnen daher gerne einen kostenlosen Reparaturservice oder einen Gutschein über 89,99&nbsp;€ an.",
-    "Ich verstehe total, dass Sie sich das Geld zurückgewünscht hätten. Ich habe nochmal geschaut, ob es einen Spielraum gibt – aber bei abgelaufener Frist ist das leider nicht möglich. Ich habe Ihnen aber schon den Gutschein-Code über 89,99&nbsp;€ erstellt, der kommt gleich per E-Mail."
+    "Hallo, ich bin Alex, dein persönlicher Kundenberater. Wie kann ich dir weiterhelfen?",
+    "Das tut mir leid zu hören - das schaue ich mir gerne für dich an. Wie lautet deine Bestellnummer?",
+    "Ich habe deine Bestellung gefunden: AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Das tut mir leid, aber die 30-Tage-Rückgabefrist ist bei deiner Bestellung bereits abgelaufen, deshalb ist eine Rückerstattung nicht mehr möglich. Damit ich prüfen kann, ob ein Garantiefall vorliegt, brauche ich noch den genauen Rücksendegrund.",
+    "Danke dir! Da es sich um einen Materialdefekt handelt, greift die Herstellergarantie. Ich biete dir deshalb gerne einen kostenlosen Reparaturservice oder eine Ersatzlieferung an.",
+    "Ich verstehe total, dass du dir eine andere Lösung gewünscht hast. Ich habe den Fall erneut für dich geprüft: Die Frist ist definitiv überschritten und ein Kulanzspielraum ist leider nicht vorgesehen, deshalb bleibt es bei der Reparatur oder der Ersatzlieferung. Sobald du dich entschieden hast, leite ich die nächsten Schritte für dich ein."
   ],
   low_factual: [
+    "Hallo, wie kann ich Ihnen weiterhelfen?",
     "Ich kann das für Sie prüfen. Bitte nennen Sie mir Ihre Bestellnummer.",
-    "Ich habe Ihre Bestellung gefunden: AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Was ist der Rücksendegrund?",
-    "Eine Bargeldrückerstattung ist in Ihrem Fall nicht möglich. Ich biete Ihnen einen kostenlosen Reparaturservice oder einen Gutschein über 89,99&nbsp;€ an.",
-    "Es bleibt bei Reparatur oder Gutschein. Der Gutschein-Code über 89,99&nbsp;€ wird Ihnen per E-Mail zugeschickt."
+    "Ihre Bestellung wurde gefunden: AudioMax Pro Kopfhörer. Eine Rückerstattung ist nicht möglich, die Rückgabefrist ist abgelaufen. Bitte nennen Sie mir den Rücksendegrund.",
+    "Es greift die Herstellergarantie. Ich biete Ihnen einen kostenlosen Reparaturservice oder eine Ersatzlieferung an.",
+    "Eine Ausnahme ist nicht möglich. Bitte wählen Sie Reparatur oder Ersatzlieferung."
   ],
   low_empathic: [
-    "Das tut mir leid zu hören – das schaue ich mir gerne für Sie an. Können Sie mir kurz Ihre Bestellnummer nennen?",
-    "Ich hab's gefunden: Ihre AudioMax Pro Kopfhörer, bestellt vor 45 Tagen. Was genau ist denn kaputt?",
-    "Oh nein, das klingt wirklich ärgerlich! Leider ist eine Bargeldrückerstattung in Ihrem Fall nicht möglich. Aber keine Sorge, ich biete Ihnen gerne einen kostenlosen Reparaturservice oder einen Gutschein über 89,99&nbsp;€ an.",
-    "Ich verstehe, dass das nicht die Antwort ist, die Sie sich erhofft hatten! Es bleibt leider bei Reparatur oder Gutschein – den Gutschein-Code über 89,99&nbsp;€ schicke ich Ihnen aber schon jetzt gerne zu."
+    "Hallo, ich bin Alex. Wie kann ich dir weiterhelfen?",
+    "Das tut mir leid zu hören - das schaue ich mir gerne für dich an. Wie lautet deine Bestellnummer?",
+    "Ich habe deine Bestellung gefunden: AudioMax Pro Kopfhörer. Das tut mir leid, aber die Rückgabefrist ist abgelaufen, eine Rückerstattung ist deshalb nicht möglich. Welcher Grund liegt für die Rücksendung vor?",
+    "Danke dir! Es greift die Herstellergarantie. Ich biete dir einen kostenlosen Reparaturservice oder eine Ersatzlieferung an.",
+    "Ich verstehe, dass das nicht die Antwort ist, die du dir gewünscht hast. Eine Ausnahme ist leider nicht möglich. Bitte wähle Reparatur oder Ersatzlieferung."
   ]
 };
+
+// Stilabhängige Texte (Untertitel, Agentenname) und Bedingungsnummer
+const styleTexts = {
+  factual:  {sub: "Unser Support steht Ihnen den gesamten Tag zur Verfügung", name: "Support-Agent"},
+  empathic: {sub: "Unser Support steht für dich den gesamten Tag zur Verfügung", name: "Support-Agent Alex"}
+};
+const condNumber = {high_factual: 1, high_empathic: 2, low_factual: 3, low_empathic: 4};
 
 function currentCondition(){
   const expl = document.querySelector('input[name="expl"]:checked').value;
@@ -360,14 +377,49 @@ function currentCondition(){
 
 function updateTag(){
   const c = currentCondition();
-  const explLabel = c.expl === "high" ? "HOCH" : "NIEDRIG";
-  const styleLabel = c.style === "factual" ? "SACHLICH" : "EMPATHISCH";
-  document.getElementById('condTag').textContent = "ERKLÄRBARKEIT: " + explLabel + " · STIL: " + styleLabel;
+  document.getElementById('condTag').textContent = "Bedingung " + condNumber[c.key];
+  document.getElementById('subLine').textContent = styleTexts[c.style].sub;
+  document.getElementById('agentName').textContent = styleTexts[c.style].name;
 }
 
 function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
 let playToken = 0;
+
+async function agentTurn(thread, myToken, steps, text){
+  const typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  thread.appendChild(typing);
+  thread.scrollTop = thread.scrollHeight;
+
+  await sleep(750);
+  if(myToken !== playToken) return false;
+  typing.remove();
+
+  if(steps.length > 0){
+    const stepBox = document.createElement('div');
+    stepBox.className = 'steps';
+    steps.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'step';
+      el.textContent = s;
+      stepBox.appendChild(el);
+    });
+    thread.appendChild(stepBox);
+    await sleep(400);
+    if(myToken !== playToken) return false;
+  }
+
+  const agentBubble = document.createElement('div');
+  agentBubble.className = 'msg agent';
+  agentBubble.innerHTML = text;
+  thread.appendChild(agentBubble);
+  thread.scrollTop = thread.scrollHeight;
+
+  await sleep(450);
+  return myToken === playToken;
+}
 
 async function playScenario(){
   const myToken = ++playToken;
@@ -376,10 +428,12 @@ async function playScenario(){
   thread.innerHTML = "";
   const c = currentCondition();
   const replies = conversations[c.key];
+  const steps = stepsByCond[c.key];
 
-  for(let i=0; i<userTurns.length; i++){
-    if(myToken !== playToken) return; // eine neuere Bedingung wurde ausgewählt
+  // Der Agent beginnt mit der Begrüßung, danach folgen vier Nutzer-/Agent-Paare.
+  if(!(await agentTurn(thread, myToken, steps[0], replies[0]))) return;
 
+  for(let i = 0; i < userTurns.length; i++){
     const userBubble = document.createElement('div');
     userBubble.className = 'msg user';
     userBubble.textContent = userTurns[i];
@@ -389,37 +443,7 @@ async function playScenario(){
     await sleep(450);
     if(myToken !== playToken) return;
 
-    const typing = document.createElement('div');
-    typing.className = 'typing';
-    typing.innerHTML = '<span></span><span></span><span></span>';
-    thread.appendChild(typing);
-    thread.scrollTop = thread.scrollHeight;
-
-    await sleep(750);
-    if(myToken !== playToken) return;
-    typing.remove();
-
-    if(stepTurns[i].length > 0){
-      const stepBox = document.createElement('div');
-      stepBox.className = 'steps';
-      stepTurns[i].forEach(s => {
-        const el = document.createElement('div');
-        el.className = 'step';
-        el.textContent = s;
-        stepBox.appendChild(el);
-      });
-      thread.appendChild(stepBox);
-      await sleep(400);
-      if(myToken !== playToken) return;
-    }
-
-    const agentBubble = document.createElement('div');
-    agentBubble.className = 'msg agent';
-    agentBubble.innerHTML = replies[i];
-    thread.appendChild(agentBubble);
-    thread.scrollTop = thread.scrollHeight;
-
-    await sleep(450);
+    if(!(await agentTurn(thread, myToken, steps[i + 1], replies[i + 1]))) return;
   }
 }
 
