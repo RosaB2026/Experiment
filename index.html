@@ -375,9 +375,11 @@
       </div>
 
       <div class="finish" id="finish">
-        <div class="finish-text">Der Chat ist beendet</div>
-        <button class="finish-btn" id="finishBtn">Weiter zur Befragung →</button>
-      </div>
+  <div class="finish-text">
+    Der Chat ist beendet. Du kannst dieses Fenster nun schließen
+    und zur Umfrage zurückkehren.
+  </div>
+</div>
 
       <div class="preview-tools" id="previewTools">
         <button class="replay-btn" onclick="startScenario()">Dialog neu starten ↻</button>
@@ -475,7 +477,6 @@ const sendBtn = document.getElementById('sendBtn');
 const composerField = document.getElementById('composerField');
 const composer = document.getElementById('composer');
 const finishBox = document.getElementById('finish');
-const finishBtn = document.getElementById('finishBtn');
 
 function currentCondition(){
   if(participantMode){
@@ -676,7 +677,6 @@ function onFinish() {
 // Start
 // ---------------------------------------------------------------
 sendBtn.addEventListener('click', onSend);
-finishBtn.addEventListener('click', onFinish);
 
 if(participantMode){
   const parts = forcedCond.split('_');
