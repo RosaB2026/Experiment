@@ -361,7 +361,7 @@
   <div class="layout">
     <div class="brief">
       <h2>Aufgabenbeschreibung</h2>
-      <p>Sie haben vor ungefähr einem Monat kabellose Kopfhörer bestellt. Seit heute funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um das Problem zu klären. Der Shop gewährt laut seinen Bedingungen eine Rückgabefrist von 30 Tagen.</p>
+      <p>Sie haben vor ungefähr einem Monat kabellose Kopfhörer bestellt. Seit heute funktioniert der linke Ohrhörer nicht mehr. Sie wenden sich an den Kundenservice, um das Problem zu klären.</p>
       <p>Klicken Sie im Chat jeweils auf „Senden“, um das Gespräch fortzuführen. Ihre Nachrichten sind vorformuliert.</p>
       <div class="agentdef">
         <strong>Hinweis:</strong> Sie interagieren mit einem KI-Agenten. Im Unterschied zu einem einfachen Chatbot kann dieser Agent eigenständig mehrschrittige Aufgaben übernehmen — z.&nbsp;B. Bestellungen prüfen und Entscheidungen ausführen, ohne dass Sie jeden Schritt einzeln anstoßen müssen.
@@ -429,15 +429,29 @@ const userTurns = [
   "Der linke Ohrhörer gibt einfach keinen Ton mehr, egal was ich versuche."
 ];
 
-// Handlungsspur je Agent-Nachricht (Index 0 = Begrüßung, 1-3 = Antworten auf Nutzer 1-3).
-// IDENTISCH in allen vier Bedingungen: die agentische Handlungsfähigkeit ist überall gleich sichtbar.
-// Erklärbarkeit variiert ausschließlich über die Begründung im Nachrichtentext.
-const actionSteps = [
-  [],
-  [],
-  ["Bestellung Nr. 48213 wird im System gesucht", "Produktdaten & Kaufdatum werden abgerufen", "Rückerstattungsrichtlinie wird geprüft"],
-  ["Gewährleistungsrechte werden abgeglichen"]
-];
+// Handlungsspur je Erklärbarkeitsstufe und Agent-Nachricht (Index 0 = Begrüßung, 1-3 = Antworten auf Nutzer 1-3).
+// Der Agent führt in allen Bedingungen dieselben Handlungen aus; nur die DARSTELLUNG variiert:
+//  hoch   = einzelne Schritte, niedrig = kurze Statusmeldung.
+// ms = Dauer des Schritts mit animierten Punkten. Bei niedrig so gewählt, dass die Gesamtdauer
+// je Block der hohen Bedingung entspricht: Block 1: 3 x (1300+250) = 4650 -> 4400+250; Block 2: 1300+250.
+const actionSteps = {
+  high: [
+    [],
+    [],
+    [
+      {t: "Bestellung Nr. 48213 wird im System gesucht", ms: 1300},
+      {t: "Produktdaten & Kaufdatum werden abgerufen", ms: 1300},
+      {t: "Rückerstattungsrichtlinie wird geprüft", ms: 1300}
+    ],
+    [{t: "Gewährleistungsrechte werden abgeglichen", ms: 1300}]
+  ],
+  low: [
+    [],
+    [],
+    [{t: "Anfrage wird bearbeitet und geprüft", ms: 4400}],
+    [{t: "Anfrage wird weiter geprüft", ms: 1300}]
+  ]
+};
 
 const conversations = {
   high_factual: [
@@ -548,7 +562,7 @@ async function agentTurn(myToken, steps, text){
       const el = document.createElement('div');
       el.className = 'step';
       const label = document.createElement('span');
-      label.textContent = s;
+      label.textContent = s.t;
       const dots = document.createElement('span');
       dots.className = 'step-dots';
       dots.innerHTML = '<i></i><i></i><i></i>';
@@ -557,7 +571,7 @@ async function agentTurn(myToken, steps, text){
       stepBox.appendChild(el);
       thread.scrollTop = thread.scrollHeight;
 
-      await sleep(TIMING.stepActive);
+      await sleep(s.ms);
       if(!alive()) return false;
       dots.remove(); // Schritt abgeschlossen
 
@@ -615,7 +629,7 @@ async function startScenario(){
   finishBox.style.display = 'none';
 
   const c = currentCondition();
-  const ok = await agentTurn(myToken, actionSteps[0], conversations[c.key][0]);
+  const ok = await agentTurn(myToken, actionSteps[c.expl][0], conversations[c.key][0]);
   if(!ok) return;
   busy = false;
   prepareComposer(0);
@@ -636,7 +650,7 @@ async function onSend(){
   await sleep(450);
   if(myToken !== playToken) return;
 
-  const ok = await agentTurn(myToken, actionSteps[i + 1], conversations[c.key][i + 1]);
+  const ok = await agentTurn(myToken, actionSteps[c.expl][i + 1], conversations[c.key][i + 1]);
   if(!ok) return;
 
   stepIndex = i + 1;
